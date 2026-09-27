@@ -60,40 +60,58 @@ app.post("/api/threads", (request, response, next) => {
     .catch((error) => next(error));
 });
 
-app.post("/api/threads/:id", (request, response, next) => {
-  const body = request.body;
-  const threadId = request.params.id;
+app.post("/api/threads/:id", async (request, response, next) => {
+  try {
+    const body = request.body;
+    const threadId = request.params.id;
 
-  console.log(request.params)
-
-  const post = new PostModel({
-    content: body.content,
-    author: body.author,
-    thread: threadId,
-    parent: body.parent,
-  });
-
-  post.save()
-    .then((savedPost) => {
-      response.status(201).json(savedPost);
-    })
-    .catch((error) => next(error));
-});
-
-app.put("/api/posts/:id", (request, response, next) => {
-  const body = request.body;
-  const id = request.params.id;
-
-  PostModel.findByIdAndUpdate(id, body, { new: true })
-    .then((updatedPost) => {
-      if (updatedPost) {
-        response.json(updatedPost);
-      } else {
-        response.status(404).end();
+    const thread = await PostModel.findById(threadId);
+    if (!thread) {
+      return response.status(404).json({ error: "Thread not found" });
+    }
+    if (thread.thread !== null) {
+      return response.status(400).json({ error: "Not a thread" });
+    }
+    if (body.parent) {
+      const parentPost = await PostModel.findById(body.parent);
+      if (!parentPost || parentPost.thread?.toString() !== threadId) {
+        return response.status(400).json({ error: "Parent does not belong to this thread" });
       }
-    })
-    .catch((error) => next(error));
+    }
+
+    const post = new PostModel({
+      content: body.content,
+      author: body.author,
+      thread: threadId,
+      parent: body.parent,
+    });
+    const savedPost = await post.save();
+    response.status(201).json(savedPost);
+  } catch (error) {
+    next(error);
+  }
 });
+
+app.put("/api/posts/:id", async (request, response, next) => {
+  try {
+    const updatedPost = await PostModel.findByIdAndUpdate(request.params.id, request.body, {
+      new: true,
+      runValidators: true,
+    });
+    if (updatedPost) {
+      response.json(updatedPost);
+    } else {
+      response.status(404).end();
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+
+const unknownEndpoint = (request: Request, response: Response) => {
+  response.status(404).json({ error: "unknown endpoint" });
+};
+app.use(unknownEndpoint);
 
 const errorHandler = (
   error: { name: string; message: string },

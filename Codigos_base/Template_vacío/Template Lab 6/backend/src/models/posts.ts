@@ -24,7 +24,7 @@ export interface Post {
   dislikes: number
 }
 
-const BANNED = ["Huevito Rey", "Matías Toro", "Memes es mal ramo"];
+const BANNED = ["huevito rey", "matías toro", "memes es mal ramo"];
 function isNotBanned(v: string) {
   return !BANNED.includes(v.toLowerCase());
 }
@@ -45,8 +45,6 @@ const postSchema = new mongoose.Schema<Post>({
   timestamps: true 
 }); 
 
-const PostModel = mongoose.model<Post>("Post", postSchema);
-
 postSchema.set("toJSON", {
   transform: (
     _,
@@ -58,4 +56,10 @@ postSchema.set("toJSON", {
   },
 });
 
+
+const PostModel = mongoose.model<Post>("Post", postSchema);
+
+
+
 export default PostModel;
+
